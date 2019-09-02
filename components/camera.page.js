@@ -17,7 +17,7 @@ export default class CameraScreen extends React.Component {
   render() {
     const { hasCameraPermission } = this.state;
     if (hasCameraPermission === null) {
-      return <View />;
+      return <Text>Something got wrong!</Text>;;
     } else if (hasCameraPermission === false) {
       return <Text>No access to camera</Text>;
     } else {
@@ -28,7 +28,8 @@ export default class CameraScreen extends React.Component {
               style={{
                 flex: 1,
                 backgroundColor: 'transparent',
-                flexDirection: 'column',
+                alignItems: 'flex-end',
+                flexDirection: 'row',
               }}>
               <Button
                 onPress={() => {
@@ -39,8 +40,9 @@ export default class CameraScreen extends React.Component {
                   })
                 }}
                 title="Flip"
-                color="#ffffff"
+                color="#000000"
                 accessibilityLabel="Press to filp camera"/>
+              <AccelerometerSensor />
             </View>
           </Camera>
         </View>
@@ -48,4 +50,3 @@ export default class CameraScreen extends React.Component {
     }
   }
 }
-

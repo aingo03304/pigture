@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import CameraScreen from './components/camera';
+import CameraScreen from './components/camera.page';
 
 export default class App extends React.Component {
   render() {
