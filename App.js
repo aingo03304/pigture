@@ -1,20 +1,43 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import CameraScreen from './components/camera.page';
+import { StyleSheet, Text, View, Platform, StatusBar } from 'react-native';
 
-export default class App extends React.Component {
-  render() {
-    return (
-      <CameraScreen />
-    );
-  };
-};
+import { Container, Header } from 'native-base';
+
+import CameraPage from './Components/CameraPage'
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+    ...Platform.select({
+      android: {
+        marginTop: StatusBar.currentHeight
+      }
+    })
   },
+  slideDefault: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ff0000'
+  },
+  text: {
+    color: 'black',
+    fontSize: 30,
+    fontWeight: 'bold'
+  }
 });
+
+
+export default class App extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+
+  render() {
+    return (
+      <Container style={ styles.container }>
+        <CameraPage />
+      </Container>
+    );
+  };
+};
