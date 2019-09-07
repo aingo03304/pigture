@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Platform, StatusBar } from 'react-native';
 
 import { Container, Header } from 'native-base';
 
-import CameraPage from './Components/CameraPage'
+import CameraPage from './components/camera.page'
 
 const styles = StyleSheet.create({
   container: {
