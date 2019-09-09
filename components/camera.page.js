@@ -4,6 +4,7 @@ import { Camera } from 'expo-camera';
 import * as Permissions from 'expo-permissions';
 import * as MediaLibrary from 'expo-media-library';
 import * as ImagePicker from 'expo-image-picker';
+import * as ExpoPixi from 'expo-pixi';
 import { Header, Icon } from 'native-base';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import PhoneAngle from './camera.accel';
@@ -29,6 +30,7 @@ export class CameraPage extends React.Component {
       type: Camera.Constants.Type.back,
       flash: "off",
       focus: "on",
+      showSketch: false,
 
       image_uri: 'https://www.wibc.com/sites/g/files/exi441/f/styles/large_730/public/article-images-featured/gettyimages-1070215874.jpg?itok=pyYD3RhG',
       image_height: 0,
@@ -127,6 +129,20 @@ export class CameraPage extends React.Component {
     }
   };
 
+  _toggleSketch() {
+    this.setState({
+      showSketch: this.state.showSketch === true ? false : true
+    });
+  }
+
+  _toggleSketchIcon() {
+    if (this.state.showSketch) {
+      return 'ios-brush'
+    } else {
+      return 'ios-brush'
+    }
+  }
+
   _toggleCamera() {
     this.setState({
       type: this.state.type === Camera.Constants.Type.back ?
@@ -214,6 +230,17 @@ export class CameraPage extends React.Component {
     status = await Permissions.askAsync(Permissions.CAMERA_ROLL).status;
     this.setState({ hasCameraRollPermission: status === 'granted' });
   }
+
+  renderSketch() {
+    return (
+      <ExpoPixi.Sketch 
+        style={styles.pinchableImage}
+        strokeColor="0xffffff"
+        strokeWidth={5}
+        strokeAlpha={1}
+      />
+    );
+  };
   
   render() {
     return (
@@ -264,6 +291,8 @@ export class CameraPage extends React.Component {
                     source={{uri: this.state.image_uri}}
                   />
 
+                  {this.state.showSketch && this.renderSketch()}
+
                   <Header transparent>
                     <View style={styles.headerItem}>
                       <TouchableOpacity>
@@ -276,10 +305,12 @@ export class CameraPage extends React.Component {
                       <View style={styles.phoneAngle}>
                         <PhoneAngle />
                       </View>
-                      <TouchableOpacity onPress={this._toggleFocus.bind(this)}>
-                        <Text style={{ color: 'white', fontSize: 24 }}>
-                          {this._toggleFocusIcon.bind(this)()}
-                        </Text>
+                      <TouchableOpacity>
+                        <Icon
+                          onPress={this._toggleSketch.bind(this)}
+                          style={{ color: 'white', fontWeight: 'bold' }}
+                          name={ this._toggleSketchIcon.bind(this)() }
+                        />
                       </TouchableOpacity>
                     </View>
                   </Header>
