@@ -57,7 +57,7 @@ export default class PhoneRotation extends React.Component {
   _getStyle = () => {
     let { x, y } = this.state.accelerometerData;
     let angle = Math.sqrt(x * x + y * y) || 0;
-    let color = 'black';
+    let color = 'white';
 
     if (angle >= 0.99 || angle <= 0.05) {
       color = 'red';
@@ -80,7 +80,7 @@ export default class PhoneRotation extends React.Component {
 const styles = StyleSheet.create({
   rectangle: {
     width: 32,
-    backgroundColor: 'black',
+    backgroundColor: 'white',
     position: 'absolute'
   }
 })

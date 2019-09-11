@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, StatusBar, Platform, View, Dimensions } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as Permissions from 'expo-permissions';
 import * as MediaLibrary from 'expo-media-library';
@@ -26,15 +26,18 @@ export class CameraPage extends React.Component {
     this.state = {
       hasCameraPermission: null,
       hasCameraRollPermission: null,
-      ratio: "16:9",
+      ratios: [],
       type: Camera.Constants.Type.back,
       flash: "off",
       focus: "on",
       showSketch: false,
 
-      image_uri: 'https://www.wibc.com/sites/g/files/exi441/f/styles/large_730/public/article-images-featured/gettyimages-1070215874.jpg?itok=pyYD3RhG',
+      ratio: "16:9",
+      currentRatio: [16, 9],
+
+      image_uri: '',
       image_height: 0,
-      image_width: 0
+      image_width: 0,
     }
 
     /* Pinching */
@@ -139,7 +142,7 @@ export class CameraPage extends React.Component {
     if (this.state.showSketch) {
       return 'ios-brush'
     } else {
-      return 'ios-brush'
+      return 'ios-image'
     }
   }
 
@@ -208,6 +211,20 @@ export class CameraPage extends React.Component {
     }
   }
 
+  async _snapPhotoTemp() {
+    if (this.camera) {
+      const options = { quality : 1, base64: true, fixOrientation: true, exif: true };
+      await this.camera.takePictureAsync(options)
+      .then(photo => {
+        photo.exif.Orientation = 1;
+        this.setState({ image_uri: photo.uri });
+      })
+      .catch(error => {
+        console.error(error);
+      })
+    }
+  }
+
   async _pickImage() {
     this._initScaleRotateTranslation()
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -215,12 +232,21 @@ export class CameraPage extends React.Component {
     });
 
     if (!result.cancelled) {
+      console.log(result.height);
+      console.log(result.width);
       this.setState({
         image_uri: result.uri,
         image_height: result.height,
         image_width: result.width
       });
     }
+  }
+
+  async _getRatio() {
+    const ratios = await this.camera.getSupportedRatiosAsync()
+    .then((ratios) => {
+      this.setState({ ratios: ratios });
+    })
   }
 
   async componentDidMount() {
@@ -231,13 +257,114 @@ export class CameraPage extends React.Component {
     this.setState({ hasCameraRollPermission: status === 'granted' });
   }
 
+  renderHeader() {
+    return (
+      <View style={styles.headerItem}>
+        <TouchableOpacity>
+          <Icon
+            onPress={ this._toggleFlash.bind(this) }
+            style={{ color: 'white', fontWeight: 'bold' }}
+            name={ this._toggleFlashIcon.bind(this)() }
+          />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.phoneAngle}
+          onPress={this._snapPhotoTemp.bind(this)}
+        >
+          <PhoneAngle />
+        </TouchableOpacity>
+        <TouchableOpacity>
+          <Icon
+            onPress={this._toggleSketch.bind(this)}
+            style={{ color: 'white', fontWeight: 'bold' }}
+            name={ this._toggleSketchIcon.bind(this)() }
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  renderFooter() {
+    return (
+      <View style={styles.footerItem}>
+        <Icon 
+          onPress={this._pickImage.bind(this)}
+          name="ios-images"
+          style={{color: 'white', fontSize: 36}}
+        />
+        <TouchableOpacity
+          onPress={this._snapPhoto.bind(this)}
+          style={{alignItems: 'center'}}
+        >
+          <MaterialCommunityIcons 
+            name="circle-outline"
+            style={{color: 'white', fontSize: 100}}
+          />
+        </TouchableOpacity>
+        <Icon 
+          onPress={this._toggleCamera.bind(this)}
+          name="ios-reverse-camera" 
+          style={{color: 'white', fontSize: 36}} 
+        />
+      </View>
+    );
+  }
+
+  renderCamera() {
+    const height = Platform.select({
+      ios: Dimensions.get('window').height,
+      android: Dimensions.get('window').height - StatusBar.currentHeight
+    });
+    const width = Dimensions.get('window').width;
+    const cameraHeight = width * this.state.currentRatio[0] / this.state.currentRatio[1]
+    const cameraWidth =  width
+
+    return (
+      <Camera
+        style={[
+          styles.onScreenCenter, 
+          {
+            height: cameraHeight,
+            width: cameraWidth,
+          }
+        ]}
+        type={this.state.type}
+        ref= { (ref) => {this.initCamera(ref)} }
+        ratio={this.state.ratio}
+        flashMode={this.state.flash}
+        autoFocus={this.state.focus}
+      />
+    )
+  }
+
   renderSketch() {
     return (
       <ExpoPixi.Sketch 
         style={styles.pinchableImage}
         strokeColor="0xffffff"
-        strokeWidth={5}
+        strokeWidth={10}
         strokeAlpha={1}
+      />
+    );
+  };
+
+  renderBackgroundImage() {
+    console.log(this.state.image_uri);
+    return (
+      <Animated.Image
+        style={[
+          styles.pinchableImage,
+          {
+            transform: [
+              { perspective: 200 },
+              { scale: this._scale },
+              { rotate: this._rotateStr },
+              { translateX: this._translateX },
+              { translateY: this._translateY }
+            ],
+          }
+        ]}
+        source={{uri: this.state.image_uri}}
       />
     );
   };
@@ -264,78 +391,15 @@ export class CameraPage extends React.Component {
                 simultaneousHandlers={this.rotationRef}
                 onGestureEvent={this._onPinchGestureEvent}
                 onHandlerStateChange={this._onPinchHandlerStateChange}>
-                <Animated.View style={styles.container} collapsable={false}>
-                  <Camera
-                    style={styles.onScreenCenter}
-                    type={this.state.type}
-                    ref= { (ref) => {this.initCamera(ref)} }
-                    ratio="16:9"
-                    flashMode={this.state.flash}
-                    autoFocus={this.state.focus}
-                  >
-                  </Camera>
-
-                  <Animated.Image
-                    style={[
-                      styles.pinchableImage,
-                      {
-                        transform: [
-                          { perspective: 200 },
-                          { scale: this._scale },
-                          { rotate: this._rotateStr },
-                          { translateX: this._translateX },
-                          { translateY: this._translateY }
-                        ],
-                      }
-                    ]}
-                    source={{uri: this.state.image_uri}}
-                  />
-
+                <Animated.View 
+                  style={styles.container}
+                  collapsable={false}
+                >
+                  {this.renderCamera()}
+                  {this.state.showSketch === false && this.renderBackgroundImage()}
                   {this.state.showSketch && this.renderSketch()}
-
-                  <Header transparent>
-                    <View style={styles.headerItem}>
-                      <TouchableOpacity>
-                        <Icon
-                          onPress={ this._toggleFlash.bind(this) }
-                          style={{ color: 'white', fontWeight: 'bold' }}
-                          name={ this._toggleFlashIcon.bind(this)() }
-                        />
-                      </TouchableOpacity>
-                      <View style={styles.phoneAngle}>
-                        <PhoneAngle />
-                      </View>
-                      <TouchableOpacity>
-                        <Icon
-                          onPress={this._toggleSketch.bind(this)}
-                          style={{ color: 'white', fontWeight: 'bold' }}
-                          name={ this._toggleSketchIcon.bind(this)() }
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </Header>
-                  
-                  <View style={styles.footerItem}>
-                    <Icon 
-                      onPress={this._pickImage.bind(this)}
-                      name="ios-images"
-                      style={{color: 'white', fontSize: 36}}
-                    />
-                    <TouchableOpacity
-                      onPress={this._snapPhoto.bind(this)}
-                      style={{alignItems: 'center'}}
-                    >
-                      <MaterialCommunityIcons 
-                        name="circle-outline"
-                        style={{color: 'white', fontSize: 100}}
-                      />
-                    </TouchableOpacity>
-                    <Icon 
-                      onPress={this._toggleCamera.bind(this)}
-                      name="ios-reverse-camera" 
-                      style={{color: 'white', fontSize: 36}} 
-                    />
-                  </View>
+                  {this.renderHeader()}
+                  {this.renderFooter()}
                 </Animated.View>
               </PinchGestureHandler>
             </Animated.View>
@@ -357,29 +421,29 @@ const styles = StyleSheet.create({
     right: 0
   },
   container: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'black',
     flex: 1,
     justifyContent: 'space-between'
   },
   pinchableImage: {
     position: 'absolute',
-    resizeMode: 'cover',
     top: 0,
     left: 0,
     bottom: 0,
     right: 0,
     opacity: 0.3,
-    flex: 1
   },
   wrapper: {
     flex: 1,
   },
   headerItem: {
     flexDirection: 'row',
+    marginTop: 15,
     flex: 2,
     justifyContent: 'space-around'
   },
   footerItem: {
+    backgroundColor: 'black',
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
@@ -391,7 +455,7 @@ const styles = StyleSheet.create({
     width: 32,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'black',
+    borderColor: 'white',
     borderRadius: 100/2,
     overflow: 'hidden'
   }
