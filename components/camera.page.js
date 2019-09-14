@@ -1,11 +1,11 @@
-import React, { Component } from 'react';
-import { Animated, StyleSheet, StatusBar, Platform, View, Dimensions } from 'react-native';
+import React from 'react';
+import { Animated, StyleSheet, StatusBar, Platform, View, Dimensions, Slider } from 'react-native';
 import { Camera } from 'expo-camera';
 import * as Permissions from 'expo-permissions';
 import * as MediaLibrary from 'expo-media-library';
 import * as ImagePicker from 'expo-image-picker';
 import * as ExpoPixi from 'expo-pixi';
-import { Header, Icon } from 'native-base';
+import { Icon } from 'native-base';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import PhoneAngle from './camera.accel';
 
@@ -30,6 +30,7 @@ export class CameraPage extends React.Component {
       type: Camera.Constants.Type.back,
       flash: "off",
       focus: "on",
+      zoom: 0,
       showSketch: false,
 
       ratio: "16:9",
@@ -79,10 +80,6 @@ export class CameraPage extends React.Component {
     this._pinchScale = new Animated.Value(1);
     this._scale = Animated.multiply(this._baseScale, this._pinchScale);
     this._lastScale = 1;
-    this._onPinchGestureEvent = Animated.event(
-      [{ nativeEvent: { scale: this._pinchScale } }],
-      { useNativeDriver: true }
-    );
 
     /* Rotation */
     this._rotate = new Animated.Value(0);
@@ -91,19 +88,11 @@ export class CameraPage extends React.Component {
       outputRange: ['-100rad', '100rad'],
     });
     this._lastRotate = 0;
-    this._onRotateGestureEvent = Animated.event(
-      [{ nativeEvent: { rotation: this._rotate } }],
-      { useNativeDriver: true }
-    );
 
     /* Translation */
     this._translateX = new Animated.Value(0);
     this._translateY = new Animated.Value(0);
     this._lastOffset = { x: 0, y: 0 };
-    this._onPanGestureEvent = Animated.event(
-      [{ nativeEvent: { translationX: this._translateX, translationY: this._translateY }}],
-      { useNativeDriver: true }
-    );
   }
 
   _onRotateHandlerStateChange = event => {
@@ -193,6 +182,12 @@ export class CameraPage extends React.Component {
     }
   }
 
+  _setZoom(val) {
+    this.setState({
+      zoom: val
+    });
+  }
+
   initCamera(ref) {
     this.camera = ref;
   }
@@ -271,7 +266,7 @@ export class CameraPage extends React.Component {
           style={styles.phoneAngle}
           onPress={this._snapPhotoTemp.bind(this)}
         >
-          <PhoneAngle />
+          <PhoneAngle/>
         </TouchableOpacity>
         <TouchableOpacity>
           <Icon
@@ -286,26 +281,41 @@ export class CameraPage extends React.Component {
 
   renderFooter() {
     return (
-      <View style={styles.footerItem}>
-        <Icon 
-          onPress={this._pickImage.bind(this)}
-          name="ios-images"
-          style={{color: 'white', fontSize: 36}}
-        />
-        <TouchableOpacity
-          onPress={this._snapPhoto.bind(this)}
-          style={{alignItems: 'center'}}
+      <View>
+        <View
+          style={styles.slider}
         >
-          <MaterialCommunityIcons 
-            name="circle-outline"
-            style={{color: 'white', fontSize: 100}}
+          <Slider
+            minimumValue={0}
+            maximumValue={1}
+            thumbTintColor="white"
+            minimumTrackImage="white"
+            maximumTrackTintColor="white"
+            onValueChange={this._setZoom.bind(this)}
           />
-        </TouchableOpacity>
-        <Icon 
-          onPress={this._toggleCamera.bind(this)}
-          name="ios-reverse-camera" 
-          style={{color: 'white', fontSize: 36}} 
-        />
+        </View>
+
+        <View style={styles.footerItem}>
+          <Icon 
+            onPress={this._pickImage.bind(this)}
+            name="ios-images"
+            style={{color: 'white', fontSize: 36}}
+          />
+          <TouchableOpacity
+            onPress={this._snapPhoto.bind(this)}
+            style={{alignItems: 'center'}}
+          >
+            <MaterialCommunityIcons 
+              name="circle-outline"
+              style={{color: 'white', fontSize: 100}}
+            />
+          </TouchableOpacity>
+          <Icon 
+            onPress={this._toggleCamera.bind(this)}
+            name="ios-reverse-camera" 
+            style={{color: 'white', fontSize: 36}} 
+          />
+        </View>
       </View>
     );
   }
@@ -322,7 +332,7 @@ export class CameraPage extends React.Component {
     return (
       <Camera
         style={[
-          styles.onScreenCenter, 
+          styles.onScreenCenter,
           {
             height: cameraHeight,
             width: cameraWidth,
@@ -331,6 +341,7 @@ export class CameraPage extends React.Component {
         type={this.state.type}
         ref= { (ref) => {this.initCamera(ref)} }
         ratio={this.state.ratio}
+        zoom={this.state.zoom}
         flashMode={this.state.flash}
         autoFocus={this.state.focus}
       />
@@ -349,7 +360,14 @@ export class CameraPage extends React.Component {
   };
 
   renderBackgroundImage() {
-    console.log(this.state.image_uri);
+    const height = Platform.select({
+      ios: Dimensions.get('window').height,
+      android: Dimensions.get('window').height - StatusBar.currentHeight
+    });
+    const width = Dimensions.get('window').width;
+    const cameraHeight = width * this.state.currentRatio[0] / this.state.currentRatio[1]
+    const cameraWidth =  width
+    
     return (
       <Animated.Image
         style={[
@@ -362,13 +380,15 @@ export class CameraPage extends React.Component {
               { translateX: this._translateX },
               { translateY: this._translateY }
             ],
+            height: cameraHeight,
+            width: cameraWidth
           }
         ]}
         source={{uri: this.state.image_uri}}
       />
     );
   };
-  
+
   render() {
     return (
       <PanGestureHandler
@@ -396,7 +416,7 @@ export class CameraPage extends React.Component {
                   collapsable={false}
                 >
                   {this.renderCamera()}
-                  {this.state.showSketch === false && this.renderBackgroundImage()}
+                  {this.state.image_uri !== '' && this.renderBackgroundImage()}
                   {this.state.showSketch && this.renderSketch()}
                   {this.renderHeader()}
                   {this.renderFooter()}
@@ -413,6 +433,10 @@ export class CameraPage extends React.Component {
 export default CameraPage;
 
 const styles = StyleSheet.create({
+  sliderView: {
+    height: 32,
+    opacity: 0.3
+  },
   onScreenCenter: {
     position: 'absolute',
     left: 0,
@@ -437,9 +461,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerItem: {
+    height: 32,
     flexDirection: 'row',
     marginTop: 15,
-    flex: 2,
     justifyContent: 'space-around'
   },
   footerItem: {
